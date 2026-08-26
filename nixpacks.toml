@@ -1,5 +1,13 @@
+[phases.setup]
+nixPkgs = ["php83", "php83Packages.composer", "nodejs_20"]
+
 [phases.build]
-cmds = ["npm install", "npm run build"]
+cmds = [
+    "composer install --no-dev --optimize-autoloader --no-interaction",
+    "npm install",
+    "npm run build"
+]
 
 [start]
-cmd = "php artisan migrate --force && php artisan optimize && php-fpm & nginx -g 'daemon off;'"
+cmd = "bash start.sh"
+
