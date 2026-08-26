@@ -17,46 +17,38 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        if (User::where('email', 'admin@tokositi.com')->exists()) {
-            return;
-        }
-
-        // Clean existing data safely (disable FK checks to allow truncate across MySQL/SQLite)
-        Schema::disableForeignKeyConstraints();
-        User::truncate();
-        Product::truncate();
-        Transaction::truncate();
-        TransactionItem::truncate();
-        ActivityLog::truncate();
-        Schema::enableForeignKeyConstraints();
-
         // =====================
         // USERS
         // =====================
-        $admin1 = User::create([
-            'name'     => 'Admin Toko Siti',
-            'email'    => 'admin@tokositi.com',
-            'password' => bcrypt('admin123'),
-            'role'     => 'admin',
-        ]);
+        $admin1 = User::firstOrCreate(
+            ['email' => 'admin@tokositi.com'],
+            [
+                'name'     => 'Admin Toko Siti',
+                'password' => bcrypt('admin123'),
+                'role'     => 'admin',
+            ]
+        );
 
-        User::create([
-            'name'     => 'Siti (Owner)',
-            'email'    => 'siti@tokositi.com',
-            'password' => bcrypt('admin123'),
-            'role'     => 'admin',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'siti@tokositi.com'],
+            [
+                'name'     => 'Siti (Owner)',
+                'password' => bcrypt('admin123'),
+                'role'     => 'admin',
+            ]
+        );
 
-        $kasir = User::create([
-            'name'     => 'Kasir Toko Siti',
-            'email'    => 'kasir@tokositi.com',
-            'password' => bcrypt('kasir123'),
-            'role'     => 'kasir',
-        ]);
+        $kasir = User::firstOrCreate(
+            ['email' => 'kasir@tokositi.com'],
+            [
+                'name'     => 'Kasir Toko Siti',
+                'password' => bcrypt('kasir123'),
+                'role'     => 'kasir',
+            ]
+        );
 
         // =====================
         // PRODUCTS (sembako & kebutuhan toko umum)
-        // Harga disesuaikan dengan harga eceran normal 2024
         // =====================
         $products = [
             // --- Beras ---
@@ -153,52 +145,56 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($products as $product) {
-            Product::create($product);
+            Product::firstOrCreate(
+                ['sku' => $product['sku']],
+                $product
+            );
         }
 
-        // Ambil beberapa produk untuk transaksi sampel
-        $p1 = Product::where('sku', 'BRS001')->first();
-        $p2 = Product::where('sku', 'MNY001')->first();
-        $p3 = Product::where('sku', 'GLA001')->first();
-
         // =====================
-        // TRANSAKSI SAMPEL
+        // TRANSAKSI & LOGS SAMPEL (jika belum ada)
         // =====================
-        $t1 = Transaction::create([
-            'transaction_code' => 'TRX-' . date('Ymd') . '-A1B2C3',
-            'total'            => 132000,
-            'paid_amount'      => 150000,
-            'change_amount'    => 18000,
-            'user_id'          => $kasir->id,
-            'created_at'       => now()->subHours(2),
-        ]);
+        if (Transaction::count() === 0) {
+            $p1 = Product::where('sku', 'BRS001')->first();
+            $p2 = Product::where('sku', 'MNY001')->first();
+            $p3 = Product::where('sku', 'GLA001')->first();
 
-        TransactionItem::create(['transaction_id' => $t1->id, 'product_id' => $p1->id, 'quantity' => 1, 'price' => 78000]);
-        TransactionItem::create(['transaction_id' => $t1->id, 'product_id' => $p2->id, 'quantity' => 1, 'price' => 38000]);
-        TransactionItem::create(['transaction_id' => $t1->id, 'product_id' => $p3->id, 'quantity' => 1, 'price' => 16000]);
+            if ($p1 && $p2 && $p3) {
+                $t1 = Transaction::create([
+                    'transaction_code' => 'TRX-' . date('Ymd') . '-A1B2C3',
+                    'total'            => 132000,
+                    'paid_amount'      => 150000,
+                    'change_amount'    => 18000,
+                    'user_id'          => $kasir->id,
+                    'created_at'       => now()->subHours(2),
+                ]);
 
-        // =====================
-        // ACTIVITY LOGS SAMPEL
-        // =====================
-        ActivityLog::create([
-            'user_id'     => $admin1->id,
-            'action'      => 'Add Product',
-            'description' => "Menambahkan produk baru 'Beras Pandan Wangi 5kg' (SKU: BRS001).",
-            'created_at'  => now()->subHours(4),
-        ]);
+                TransactionItem::create(['transaction_id' => $t1->id, 'product_id' => $p1->id, 'quantity' => 1, 'price' => 78000]);
+                TransactionItem::create(['transaction_id' => $t1->id, 'product_id' => $p2->id, 'quantity' => 1, 'price' => 38000]);
+                TransactionItem::create(['transaction_id' => $t1->id, 'product_id' => $p3->id, 'quantity' => 1, 'price' => 16000]);
 
-        ActivityLog::create([
-            'user_id'     => $admin1->id,
-            'action'      => 'Update Stock',
-            'description' => "Memperbarui stok 'Gula Pasir Gulaku 1kg' menjadi 4.",
-            'created_at'  => now()->subHours(3),
-        ]);
+                ActivityLog::create([
+                    'user_id'     => $admin1->id,
+                    'action'      => 'Add Product',
+                    'description' => "Menambahkan produk baru 'Beras Pandan Wangi 5kg' (SKU: BRS001).",
+                    'created_at'  => now()->subHours(4),
+                ]);
 
-        ActivityLog::create([
-            'user_id'     => $kasir->id,
-            'action'      => 'Process Transaction',
-            'description' => "Memproses transaksi {$t1->transaction_code} total Rp 132.000",
-            'created_at'  => now()->subHours(2),
-        ]);
+                ActivityLog::create([
+                    'user_id'     => $admin1->id,
+                    'action'      => 'Update Stock',
+                    'description' => "Memperbarui stok 'Gula Pasir Gulaku 1kg' menjadi 4.",
+                    'created_at'  => now()->subHours(3),
+                ]);
+
+                ActivityLog::create([
+                    'user_id'     => $kasir->id,
+                    'action'      => 'Process Transaction',
+                    'description' => "Memproses transaksi {$t1->transaction_code} total Rp 132.000",
+                    'created_at'  => now()->subHours(2),
+                ]);
+            }
+        }
     }
 }
+
