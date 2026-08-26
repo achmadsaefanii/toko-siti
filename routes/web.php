@@ -42,4 +42,16 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+use Illuminate\Support\Facades\Artisan;
+
+Route::get('/run-seeder', function () {
+    try {
+        Artisan::call('migrate', ['--force' => true]);
+        Artisan::call('db:seed', ['--force' => true]);
+        return 'Database migrated and seeded successfully!<br><br><a href="/">Kembali ke Home</a>';
+    } catch (\Exception $e) {
+        return 'Error: ' . $e->getMessage();
+    }
+});
+
 require __DIR__.'/auth.php';
