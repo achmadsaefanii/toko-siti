@@ -8,7 +8,7 @@ use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\ActivityLog;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -17,14 +17,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Clean existing data safely (disable FK checks to allow truncate)
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        if (User::where('email', 'admin@tokositi.com')->exists()) {
+            return;
+        }
+
+        // Clean existing data safely (disable FK checks to allow truncate across MySQL/SQLite)
+        Schema::disableForeignKeyConstraints();
         User::truncate();
         Product::truncate();
         Transaction::truncate();
         TransactionItem::truncate();
         ActivityLog::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        Schema::enableForeignKeyConstraints();
 
         // =====================
         // USERS
